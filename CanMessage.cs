@@ -9,7 +9,7 @@ public class CanMessage
 {
     public IDLengthEnum IDLength {get; set;}
     public FrameTypeEnum FrameType {get; set;}
-    public int ID {get; set;}
+    public uint ID {get; set;}
     public byte[]? Data {get; set;}
     
     public CanMessage()
@@ -42,7 +42,7 @@ public class CanMessage
         }
 
         Data = new Byte[dataLength];
-        ID = BitConverter.ToInt32(bytes, 1);
+        ID = BitConverter.ToUInt32(bytes, 1);
         Array.Copy(bytes, 5, Data, 0, dataLength);
     }
 

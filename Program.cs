@@ -1,6 +1,4 @@
 ﻿using System.Net;
-using System.CommandLine;
-using System.CommandLine.Invocation;
 
 internal class Program
 {

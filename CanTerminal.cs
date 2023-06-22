@@ -1,5 +1,3 @@
-using System.CommandLine;
-using System.CommandLine.Help;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;

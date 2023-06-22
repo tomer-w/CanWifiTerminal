@@ -1,10 +1,13 @@
 ﻿using System.Net;
+using System.CommandLine;
+using System.CommandLine.Invocation;
 
 internal class Program
 {
     private static async Task Main(string[] args)
     {
         Console.WriteLine("ECAN-W01S terminal");
+
         if (args.Length != 2)
         {
             Console.WriteLine("CanWifiTerminal ip port");

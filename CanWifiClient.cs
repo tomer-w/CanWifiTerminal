@@ -37,7 +37,7 @@ public class CanWifiClient
         var canMessage = new CanMessage(buffer);
         if (dumpWriter != null)
         {
-            await dumpWriter.WriteLineAsync(canMessage.Serialize());
+            await dumpWriter.WriteLineAsync($"({DateTime.Now}):{canMessage.Serialize()}");
         }
         return canMessage;
     } 

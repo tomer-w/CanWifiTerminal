@@ -90,6 +90,6 @@ public class CanMessage
         {
             return "Empty CanMessage";
         }
-        return $"Can message: {IDLength},{FrameType},{Data.Length},{ID}:{BitConverter.ToString(Data)}:{Serialize()}";
+        return $"CAN message: {IDLength},{FrameType},{Data.Length},{ID}:{BitConverter.ToString(Data)}:{Serialize()}";
     }
 }

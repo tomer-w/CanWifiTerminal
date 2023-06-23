@@ -6,7 +6,11 @@ public class CanTerminal
 {
     CanWifiClient client;
     bool consolePrint = false;
+    bool filter = false;
     long messageReceived = 0;
+
+    private Dictionary<ulong, ulong> idsMap = new Dictionary<ulong, ulong>();
+    private HashSet<ulong> filters = new HashSet<ulong>();
 
     private CanTerminal(CanWifiClient client)
     {
@@ -25,10 +29,24 @@ public class CanTerminal
         try
         {
             var message =  await client.ReceiveMessageAsync();
+            ulong count;
+            idsMap.TryGetValue(message.ID, out count);
+            idsMap[message.ID] = ++count;
+            bool idFirstTime = idsMap[message.ID] == 1;
+            bool filtered = (filter == true) && filters.Contains(message.ID);
             messageReceived++;
-            if (consolePrint)
+            if (consolePrint || idFirstTime || filtered)
             {
-                Console.WriteLine(message);
+                if (idFirstTime)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                }
+                if (filtered)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                }
+                Console.WriteLine($"{count}:{message}");
+                Console.ResetColor();
             }
         }
         catch (Exception e)
@@ -82,6 +100,35 @@ public class CanTerminal
                 Console.WriteLine($"Console print stopped");
                 consolePrint = true;
             }
+            else if(argc.Count == 2 && argc[0] == "filter" && argc[1] == "off")
+            {
+                Console.WriteLine($"Console filter off");
+                filter = false;
+            }
+            else if(argc.Count == 2 && argc[0] == "filter" && argc[1] == "on")
+            {
+                Console.WriteLine($"Console filter on");
+                filter = true;
+            }
+            else if(argc.Count == 2 && argc[0] == "filter" && argc[1] == "clear")
+            {
+                Console.WriteLine($"Filter reset");
+                filters.Clear();
+            }
+            else if(argc.Count == 2 && argc[0] == "filter")
+            {
+                ulong val = ulong.Parse(argc[1]);
+                if (filters.Contains(val))
+                {
+                    Console.WriteLine($"Filter {val} removed");
+                    filters.Remove(val);
+                }
+                else
+                {
+                    Console.WriteLine($"Filter {val} added");
+                    filters.Add(val);
+                }
+            }
             else if(input.StartsWith("{") && input.EndsWith("}"))
             {
                 var canMessage = CanMessage.Deserialize(input);
@@ -94,6 +141,10 @@ public class CanTerminal
                 Console.WriteLine(" dump stop");
                 Console.WriteLine(" print start");
                 Console.WriteLine(" print stop");
+                Console.WriteLine(" filter on");
+                Console.WriteLine(" filter off");
+                Console.WriteLine(" filter clear");
+                Console.WriteLine(" filter <id>");
                 Console.WriteLine(" {json CAN message} to send");
             }
         }

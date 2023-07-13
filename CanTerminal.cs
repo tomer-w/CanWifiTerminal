@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,8 +10,11 @@ public class CanTerminal
     bool filter = false;
     long messageReceived = 0;
 
+    Stopwatch stopwatch = new Stopwatch();
+
     private Dictionary<ulong, ulong> idsMap = new Dictionary<ulong, ulong>();
     private HashSet<ulong> filters = new HashSet<ulong>();
+    private HashSet<int> uniqueMessagesHashes = new HashSet<int>();
 
     private CanTerminal(CanWifiClient client)
     {
@@ -32,12 +36,14 @@ public class CanTerminal
             ulong count;
             idsMap.TryGetValue(message.ID, out count);
             idsMap[message.ID] = ++count;
-            bool idFirstTime = idsMap[message.ID] == 1;
+            bool isFirstTimeID = idsMap[message.ID] == 1;
+            int messageHash = message.GetHashCode();
+            bool isFirstTimeMessage = uniqueMessagesHashes.Add(messageHash);         
             bool filtered = (filter == true) && filters.Contains(message.ID);
             messageReceived++;
-            if (consolePrint || idFirstTime || filtered)
+            if (consolePrint || isFirstTimeID  || isFirstTimeMessage || filtered)
             {
-                if (idFirstTime)
+                if (isFirstTimeID || isFirstTimeMessage)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                 }
@@ -45,9 +51,14 @@ public class CanTerminal
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
                 }
-                Console.WriteLine($"{count}:{message}");
+                Console.WriteLine($"{stopwatch.ElapsedMilliseconds}:{count}:{message}");
                 Console.ResetColor();
             }
+        }
+        catch (InvalidOperationException e)
+        {
+            Console.WriteLine($"Reading from socket failed: {e}");
+            throw;
         }
         catch (Exception e)
         {
@@ -59,7 +70,7 @@ public class CanTerminal
     private async Task HandleTimer()
     {
         await Task.Delay(TimeSpan.FromSeconds(10));
-        Console.WriteLine($"Messages received: {messageReceived}");
+        Console.WriteLine($"Messages received: {messageReceived}, Channel connected: {client.Connected}");
         Task ignoredTask = HandleTimer();
     }
 
@@ -98,7 +109,13 @@ public class CanTerminal
             else if(argc.Count == 2 && argc[0] == "print" && argc[1] == "stop")
             {
                 Console.WriteLine($"Console print stopped");
-                consolePrint = true;
+                consolePrint = false;
+            }
+            else if(argc.Count == 1 && argc[0] == "clean")
+            {
+                Console.WriteLine($"Clean history");
+                idsMap.Clear();
+                uniqueMessagesHashes.Clear();
             }
             else if(argc.Count == 2 && argc[0] == "filter" && argc[1] == "off")
             {
@@ -157,6 +174,7 @@ public class CanTerminal
 
     public async Task Loop()
     {
+        stopwatch.Start();
         Task receiveTask = HandleNextMessage();
         Task timerTask = HandleTimer();
 

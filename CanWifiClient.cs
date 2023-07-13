@@ -6,6 +6,8 @@ public class CanWifiClient
     private TcpClient tcpClient = new TcpClient();
     private StreamWriter? dumpWriter;
 
+    public bool Connected {get => tcpClient.Connected;}
+
     public static async Task<CanWifiClient> Connect(IPAddress ip, int port)
     {
         var canWifiClient = new CanWifiClient();

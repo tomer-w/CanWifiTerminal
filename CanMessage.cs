@@ -92,4 +92,9 @@ public class CanMessage
         }
         return $"CAN message: {IDLength},{FrameType},{Data.Length},{ID}:{BitConverter.ToString(Data)}:{Serialize()}";
     }
+
+    public override int GetHashCode()
+    {
+        return Serialize().GetHashCode();
+    }
 }

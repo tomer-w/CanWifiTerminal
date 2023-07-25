@@ -34,6 +34,10 @@ public class CanWifiClient
         while (left > 0)
         {
             int byteCount = await tcpClient.GetStream().ReadAsync(buffer, 13 - left, left);
+            if (byteCount == 0)
+            {
+                throw new Exception("Connection got closed");
+            }
             left -= byteCount;
         }
         var canMessage = new CanMessage(buffer);

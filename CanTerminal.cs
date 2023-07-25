@@ -8,13 +8,15 @@ public class CanTerminal
     CanWifiClient client;
     bool consolePrint = false;
     bool filter = false;
+    bool onlyNew = false;
     long messageReceived = 0;
 
     Stopwatch stopwatch = new Stopwatch();
 
     private Dictionary<ulong, ulong> idsMap = new Dictionary<ulong, ulong>();
-    private HashSet<ulong> filters = new HashSet<ulong>();
+    private HashSet<ulong> OnlyIds = new HashSet<ulong>();
     private HashSet<int> uniqueMessagesHashes = new HashSet<int>();
+    private HashSet<int> ignoreMessagesHashes = new HashSet<int>();
 
     private CanTerminal(CanWifiClient client)
     {
@@ -39,9 +41,10 @@ public class CanTerminal
             bool isFirstTimeID = idsMap[message.ID] == 1;
             int messageHash = message.GetHashCode();
             bool isFirstTimeMessage = uniqueMessagesHashes.Add(messageHash);         
-            bool filtered = (filter == true) && filters.Contains(message.ID);
+            bool filtered = (filter == true) && OnlyIds.Contains(message.ID);
+            bool ignore = ignoreMessagesHashes.Contains(messageHash);
             messageReceived++;
-            if (consolePrint || isFirstTimeID  || isFirstTimeMessage || filtered)
+            if (!ignore && (consolePrint || isFirstTimeID  || isFirstTimeMessage || filtered || (onlyNew && !ignore)))
             {
                 if (isFirstTimeID || isFirstTimeMessage)
                 {
@@ -77,8 +80,9 @@ public class CanTerminal
     //Split by spaces but keep together qouted text. Authored by ChatGPT: "c# regex match quoted string with spaces"
     private IList<string> splitInput(String input)
     {
-        var result = Regex.Matches(input, @"(?<="")[^""]+(?="")|(?<=')[^']+(?=')|[^'""\s]+");
-        List<string> list = result.Select(m => m.Value).ToList();
+        // var result = Regex.Matches(input, @"(?<="")[^""]+(?="")|(?<=')[^']+(?=')|[^'""\s]+");
+        // List<string> list = result.Select(m => m.Value).ToList();
+        var list = input.Split(" ");
         return list;
     }
 
@@ -117,6 +121,12 @@ public class CanTerminal
                 idsMap.Clear();
                 uniqueMessagesHashes.Clear();
             }
+            else if(argc.Count == 1 && argc[0] == "onlynew")
+            {
+                Console.WriteLine($"Only new");
+                onlyNew = true;
+                ignoreMessagesHashes = new HashSet<int>(uniqueMessagesHashes);
+            }
             else if(argc.Count == 2 && argc[0] == "filter" && argc[1] == "off")
             {
                 Console.WriteLine($"Console filter off");
@@ -130,20 +140,35 @@ public class CanTerminal
             else if(argc.Count == 2 && argc[0] == "filter" && argc[1] == "clear")
             {
                 Console.WriteLine($"Filter reset");
-                filters.Clear();
+                OnlyIds.Clear();
             }
-            else if(argc.Count == 2 && argc[0] == "filter")
+            else if(argc.Count == 2 && argc[0] == "only")
             {
                 ulong val = ulong.Parse(argc[1]);
-                if (filters.Contains(val))
+                if (OnlyIds.Contains(val))
                 {
-                    Console.WriteLine($"Filter {val} removed");
-                    filters.Remove(val);
+                    Console.WriteLine($"only {val} removed");
+                    OnlyIds.Remove(val);
                 }
                 else
                 {
-                    Console.WriteLine($"Filter {val} added");
-                    filters.Add(val);
+                    Console.WriteLine($"only {val} added");
+                    OnlyIds.Add(val);
+                }
+            }
+            else if(argc.Count == 2 && argc[0] == "filter")
+            {
+                var canMessage = CanMessage.Deserialize(argc[1]);
+                var hash = canMessage.GetHashCode();
+                if (ignoreMessagesHashes.Contains(hash))
+                {
+                    Console.WriteLine($"Filter {hash} removed");
+                    ignoreMessagesHashes.Remove(hash);
+                }
+                else
+                {
+                    Console.WriteLine($"Filter {hash} added");
+                    ignoreMessagesHashes.Add(hash);
                 }
             }
             else if(input.StartsWith("{") && input.EndsWith("}"))
@@ -161,7 +186,9 @@ public class CanTerminal
                 Console.WriteLine(" filter on");
                 Console.WriteLine(" filter off");
                 Console.WriteLine(" filter clear");
-                Console.WriteLine(" filter <id>");
+                Console.WriteLine(" only <id>");
+                Console.WriteLine(" filter <json message>");
+                Console.WriteLine(" onlynew");
                 Console.WriteLine(" {json CAN message} to send");
             }
         }
